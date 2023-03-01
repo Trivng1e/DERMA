@@ -20,21 +20,23 @@ from keras import layers, models
 from keras.preprocessing.image import ImageDataGenerator
 from keras.models import Sequential
 
-img_width = 256
-img_height = 256
+#setting basic variables
+img_width = 128
+img_height = 128
 batch_size = 128
 
+#identifying train data
 train_images = tf.keras.preprocessing.image_dataset_from_directory(
     '/content/drive/MyDrive/DERMNET/Train/',
     labels='inferred',
-    label_mode = "categorical", 
-    color_mode='rgb',
+    label_mode = "categorical", # binary
+    color_mode='rgb', #grayscale
     batch_size= batch_size,
     image_size=(img_height,img_width),
-    shuffle=True,
-    seed=123,
+    shuffle=True, 
+    seed=123, #to prevent same data being run
 )
-
+#identifying test data
 test_images = tf.keras.preprocessing.image_dataset_from_directory(
     '/content/drive/MyDrive/DERMNET/Test/',
     labels="inferred",
@@ -46,34 +48,25 @@ test_images = tf.keras.preprocessing.image_dataset_from_directory(
     seed=123,
 )
 
-#for image_batch, labels_batch in train_images:
- # print(image_batch.shape)
-  #print(labels_batch.shape)
-  #break
-
-#for image_batch, labels_batch in test_images:
- # print(image_batch.shape)
-  #print(labels_batch.shape)
-  #break
-
+#Tuning model
 AUTOTUNE = tf.data.AUTOTUNE
 
 train_images = train_images.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE)
 test_images = test_images.cache().prefetch(buffer_size=AUTOTUNE)
 
+#data augmentation for increasing data
 data_augmentation = keras.Sequential(
   [
     layers.RandomFlip("horizontal",
-                      input_shape=(img_height,
-                                  img_width,
-                                  3)),
+                      input_shape=(img_height, img_width, 3)),
     layers.RandomRotation(0.1),
     layers.RandomZoom(0.1),
   ]
 )
 
+#Model: 3 convolutional layers, 2 maxpooling
 model = models.Sequential()
-model.add(keras.Input(shape = (256,256, 3)))
+model.add(keras.Input(shape = (128,128, 3)))
 model.add(layers.Conv2D(32, (3, 3), activation='relu'))
 model.add(layers.MaxPooling2D((2, 2)))
 model.add(layers.Conv2D(64, (3, 3), activation='relu'))
@@ -85,24 +78,14 @@ model.add(layers.Dense(3))
 
 model.summary()
 
-data_augmentation = keras.Sequential(
-  [
-    layers.RandomFlip("horizontal",
-                      input_shape=(img_height,
-                                  img_width,
-                                  3)),
-    layers.RandomRotation(0.1),
-    layers.RandomZoom(0.1),
-  ]
-)
-
-model.compile(optimizer='adam',
+#compiling
+model.compile(optimizer='adam',#RMSProp
               loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True),
               metrics=['accuracy'])
 
 history = model.fit(
     train_images, 
-    epochs = 20, 
+    epochs = 10, 
     batch_size = 128, 
     validation_data = test_images
     )
